@@ -1,0 +1,5 @@
+{
+  "name": "ToolTrace AI",
+  "description": "An innovative tool that extracts software projects and tools mentioned in YouTube videos using Supadata and Gemini AI.",
+  "requestFramePermissions": []
+}
