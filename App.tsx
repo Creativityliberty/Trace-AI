@@ -11,7 +11,6 @@ const ToolCard: React.FC<{ tool: ToolMention; index: number }> = ({ tool, index 
       className="mizu-card flex flex-col h-full group animate-reveal border-0 overflow-hidden bg-white"
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      {/* AI Generated Visual Header */}
       <div className="h-48 w-full bg-[#0a0f1d] relative overflow-hidden">
         {tool.aiThumbnail ? (
           <img src={tool.aiThumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-1000 opacity-80" alt={tool.name} />
@@ -21,10 +20,15 @@ const ToolCard: React.FC<{ tool: ToolMention; index: number }> = ({ tool, index 
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-white via-transparent to-transparent"></div>
-        <div className="absolute top-6 left-6">
+        <div className="absolute top-6 left-6 flex gap-2">
           <span className="text-[9px] font-black px-3 py-1 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 uppercase tracking-[0.2em]">
             {tool.category}
           </span>
+          {tool.githubUrl && (
+            <span className="text-[9px] font-black px-3 py-1 rounded-full bg-slate-900 text-white border border-slate-700 uppercase tracking-[0.2em] flex items-center gap-1">
+              <ICONS.Github /> Repo Found
+            </span>
+          )}
         </div>
       </div>
 
@@ -44,14 +48,28 @@ const ToolCard: React.FC<{ tool: ToolMention; index: number }> = ({ tool, index 
             <span className="text-[9px] uppercase text-slate-300 tracking-[0.2em] font-black">Occurrences</span>
           </div>
           
-          <a 
-            href={tool.officialUrl || "#"} 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="w-14 h-14 bg-[#0a0f1d] rounded-2xl flex items-center justify-center text-white hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10"
-          >
-            <ICONS.ExternalLink />
-          </a>
+          <div className="flex gap-3">
+            {tool.githubUrl && (
+              <a 
+                href={tool.githubUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center text-slate-600 hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                title="GitHub Repository"
+              >
+                <ICONS.Github />
+              </a>
+            )}
+            <a 
+              href={tool.officialUrl || "#"} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-12 h-12 bg-[#0a0f1d] rounded-xl flex items-center justify-center text-white hover:bg-blue-600 transition-all shadow-lg"
+              title="Official Link"
+            >
+              <ICONS.ExternalLink />
+            </a>
+          </div>
         </div>
       </div>
     </div>
@@ -76,24 +94,50 @@ export default function App() {
     setStep(AnalysisStep.FETCHING_TRANSCRIPT);
 
     try {
+      const startTime = Date.now();
       const transcript = await fetchTranscript(url);
-      setStep(AnalysisStep.AI_EXTRACTION);
       
+      // Attempt to extract video metadata from transcript service if available
+      const videoMeta = transcript.metadata || { title: "Analyzed Session", author: "YouTube Creator" };
+
+      setStep(AnalysisStep.AI_EXTRACTION);
       const res = await extractToolsWithAI(Array.isArray(transcript.content) ? transcript.content : (transcript.transcript || []));
       
       setStep(AnalysisStep.AI_VISUAL_GEN);
-      // Generate AI visuals for each tool
       const toolsWithVisuals = await Promise.all(res.tools.map(async (tool) => {
         const visual = await generateToolVisual(tool.name, tool.category);
         return { ...tool, aiThumbnail: visual };
       }));
       
-      setExtraction({ ...res, tools: toolsWithVisuals });
+      setExtraction({ 
+        ...res, 
+        tools: toolsWithVisuals,
+        video: {
+          title: videoMeta.title,
+          author: videoMeta.author,
+          thumbnailUrl: `https://img.youtube.com/vi/${vid}/maxresdefault.jpg`
+        },
+        stats: {
+          totalTools: res.tools.length,
+          processingTimeMs: Date.now() - startTime
+        }
+      });
       setStep(AnalysisStep.COMPLETED);
     } catch (err: any) {
       setError(err.message);
       setStep(AnalysisStep.FAILED);
     }
+  };
+
+  const exportToJson = () => {
+    if (!extraction) return;
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(extraction, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href",     dataStr);
+    downloadAnchorNode.setAttribute("download", `mizu_extract_${videoId}.json`);
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
   };
 
   return (
@@ -105,11 +149,19 @@ export default function App() {
           </div>
           <span className="text-2xl font-black text-[#0a0f1d] outfit tracking-tighter">mizu.elite</span>
         </div>
-        {extraction && (
-           <div className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500 animate-pulse">
-             Scan Global Grounded
-           </div>
-        )}
+        <div className="flex items-center gap-6">
+          {extraction && (
+            <button 
+              onClick={exportToJson}
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-900 hover:bg-slate-50 transition-all shadow-sm"
+            >
+              <ICONS.FileJson /> Export JSON
+            </button>
+          )}
+          <div className="text-[10px] font-black uppercase tracking-[0.4em] text-blue-500 animate-pulse hidden md:block">
+            Grounded Protocol v2.5
+          </div>
+        </div>
       </nav>
 
       <main className="max-w-7xl mx-auto px-12 pt-48">
@@ -120,7 +172,7 @@ export default function App() {
                 Visual <br/><span className="text-slate-200">Stack.</span>
               </h1>
               <p className="text-xl text-slate-400 max-w-lg font-medium leading-relaxed mb-16">
-                Le premier moteur d'extraction de stack technologique boosté par l'IA générative et la recherche en temps réel.
+                Le premier moteur d'extraction de stack technologique boosté par l'IA générative et la recherche GitHub en temps réel.
               </p>
               <div className="relative group max-w-xl">
                 <input 
@@ -148,7 +200,7 @@ export default function App() {
               <ICONS.Loader />
             </div>
             <h2 className="text-4xl font-black outfit tracking-tighter mb-4">
-              {step === AnalysisStep.AI_VISUAL_GEN ? "Synthèse Visuelle IA..." : "Extraction Grounded..."}
+              {step === AnalysisStep.AI_VISUAL_GEN ? "Synthèse Visuelle IA..." : "Recherche GitHub & Grounding..."}
             </h2>
             <div className="w-64 h-1 bg-slate-100 rounded-full overflow-hidden">
                <div className="h-full bg-[#0a0f1d] animate-[loading_2s_infinite]"></div>
@@ -158,16 +210,29 @@ export default function App() {
 
         {extraction && (
           <div className="animate-reveal">
-            <div className="mb-24">
-               <span className="text-[10px] font-black uppercase tracking-[0.5em] text-slate-400 mb-6 block">Analysis Report</span>
-               <h2 className="text-7xl font-black text-[#0a0f1d] tracking-tighter outfit leading-none">Intelligence <br/>Exposée</h2>
-               {extraction.groundingUrls && (
-                 <div className="mt-8 flex flex-wrap gap-4">
-                   {extraction.groundingUrls.slice(0, 3).map((u, i) => (
-                     <a key={i} href={u} target="_blank" className="text-[9px] font-black uppercase tracking-widest text-blue-500 border-b border-blue-200 pb-1">{new URL(u).hostname}</a>
-                   ))}
-                 </div>
-               )}
+            {/* Video Header Detail */}
+            <div className="mb-24 flex flex-col md:flex-row gap-12 items-end">
+              <div className="w-full md:w-80 h-48 rounded-[2.5rem] overflow-hidden shadow-2xl border-4 border-white relative shrink-0">
+                <img src={extraction.video?.thumbnailUrl} className="w-full h-full object-cover" alt="Video" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0f1d]/60 to-transparent"></div>
+              </div>
+              <div className="flex-1">
+                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-blue-500 mb-6 block">Intelligence Exposée</span>
+                <h2 className="text-5xl md:text-7xl font-black text-[#0a0f1d] tracking-tighter outfit leading-none mb-6">
+                  {extraction.video?.title}
+                </h2>
+                <div className="flex items-center gap-6">
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-black text-[#0a0f1d] outfit">{extraction.video?.author}</span>
+                    <span className="text-[9px] uppercase text-slate-400 tracking-widest font-black">Creator</span>
+                  </div>
+                  <div className="w-px h-8 bg-slate-200"></div>
+                  <div className="flex flex-col">
+                    <span className="text-[14px] font-black text-[#0a0f1d] outfit">{extraction.stats.totalTools} Project(s)</span>
+                    <span className="text-[9px] uppercase text-slate-400 tracking-widest font-black">Extracted</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">

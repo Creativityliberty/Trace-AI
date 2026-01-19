@@ -1,4 +1,11 @@
 
+export interface VideoMetadata {
+  title?: string;
+  author?: string;
+  description?: string;
+  thumbnailUrl?: string;
+}
+
 export interface TranscriptChunk {
   text: string;
   offset: number;
@@ -13,29 +20,19 @@ export interface ToolMention {
   mentionsCount: number;
   confidence: number;
   officialUrl?: string;
-  aiThumbnail?: string; // Base64 image data
-  evidence: {
-    offsetMs: number | null;
-    durationMs: number | null;
-    quote: string;
-    chunkIndexes: number[];
-  }[];
+  githubUrl?: string; // New field for the next tool to use
+  aiThumbnail?: string;
   notes: string[];
 }
 
 export interface ExtractionResult {
-  source: {
-    type: string;
-    note: string;
-  };
+  video?: VideoMetadata;
   tools: ToolMention[];
   groundingUrls?: string[];
-  qualityFlags: {
-    type: string;
-    severity: "info" | "warning" | "error";
-    message: string;
-    items: string[];
-  }[];
+  stats: {
+    totalTools: number;
+    processingTimeMs: number;
+  };
 }
 
 export enum AnalysisStep {
