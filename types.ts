@@ -20,15 +20,17 @@ export interface ToolMention {
   mentionsCount: number;
   confidence: number;
   officialUrl?: string;
-  githubUrl?: string; // New field for the next tool to use
+  githubUrl?: string;
   aiThumbnail?: string;
   notes: string[];
 }
 
 export interface ExtractionResult {
+  id: string; // Unique ID (YouTube Video ID)
   video?: VideoMetadata;
   tools: ToolMention[];
   groundingUrls?: string[];
+  timestamp: number;
   stats: {
     totalTools: number;
     processingTimeMs: number;
@@ -44,3 +46,5 @@ export enum AnalysisStep {
   COMPLETED = 'COMPLETED',
   FAILED = 'FAILED'
 }
+
+export type ViewState = 'SCAN' | 'LIBRARY' | 'DASHBOARD';
