@@ -22,11 +22,13 @@ export interface ToolMention {
   officialUrl?: string;
   githubUrl?: string;
   aiThumbnail?: string;
+  timestampLabel?: string; // e.g., "04:22"
+  timestampOffset?: number; // seconds
   notes: string[];
 }
 
 export interface ExtractionResult {
-  id: string; // Unique ID (YouTube Video ID)
+  id: string;
   video?: VideoMetadata;
   tools: ToolMention[];
   groundingUrls?: string[];
@@ -48,3 +50,8 @@ export enum AnalysisStep {
 }
 
 export type ViewState = 'SCAN' | 'LIBRARY' | 'DASHBOARD';
+
+export interface ChatMessage {
+  role: 'user' | 'model';
+  text: string;
+}

@@ -7,12 +7,18 @@ export const fetchTranscript = async (url: string): Promise<any> => {
     headers: { 'x-api-key': SUPADATA_API_KEY }
   });
   
-  if (!response.ok) {
-    const err = await response.json();
-    throw new Error(err.message || 'Failed to fetch transcript');
+  let data;
+  try {
+    data = await response.json();
+  } catch (e) {
+    throw new Error('Impossible de lire la réponse du serveur (JSON invalide)');
   }
   
-  return response.json();
+  if (!response.ok) {
+    throw new Error(data.message || 'Échec de la récupération du transcript');
+  }
+  
+  return data;
 };
 
 export const pollJobStatus = async (jobId: string): Promise<any> => {
@@ -21,7 +27,7 @@ export const pollJobStatus = async (jobId: string): Promise<any> => {
   });
   
   if (!response.ok) {
-    throw new Error('Failed to check job status');
+    throw new Error('Échec de la vérification du statut du travail');
   }
   
   return response.json();
